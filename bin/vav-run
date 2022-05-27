@@ -1,0 +1,217 @@
+#!/bin/bash
+###############################################################################
+# Copyright (C) May 2022, Belmont Computing, Inc. -- All Rights Reserved
+# Licensed under the BCI-SLA. See LICENSE for details.
+#
+# NOTICE:  All information contained herein is, and remains the property of
+# Belmont Computing, Inc.  The intellectual and technical concepts contained
+# herein are proprietary to Belmont Computing, Inc. and may be covered by U.S.
+# and Foreign Patents, patents in process, and are protected by trade secret
+# or copyright law.  Dissemination of this information or reproduction of this
+# material is strictly forbidden unless prior written permission is obtained
+# from Belmont Computing, Inc.
+###############################################################################
+
+show_cmd() {
+  echo "Usage: % vav-run [--help] [--verbose] [--echo] [--sw-build-only]"
+  echo "                 [--run-only] [--local] [--remote-pts] [--remote-ocd]"
+  echo "                 [<test>|<regression> ...]"
+  echo ""
+}
+
+
+##
+##  Set file and directory paths.
+##
+
+SCRIPT_PATH="${BASH_SOURCE}"
+while [ -L "${SCRIPT_PATH}" ]; do
+  SCRIPT_DIR="$(cd -P "$(dirname "${SCRIPT_PATH}")" >/dev/null 2>&1 && pwd)"
+  SCRIPT_PATH="$(readlink "${SCRIPT_PATH}")"
+  [[ ${SCRIPT_PATH} != /* ]] && SCRIPT_PATH="${SCRIPT_DIR}/${SCRIPT_PATH}"
+done
+SCRIPT_PATH="$(readlink -f "${SCRIPT_PATH}")"
+
+BIN_DIR="$(cd -P "$(dirname -- "${SCRIPT_PATH}")" >/dev/null 2>&1 && pwd)"
+SETUP_DIR="$(dirname "$BIN_DIR")"
+PROJ_ROOT="$(dirname "$SETUP_DIR")"
+SCRATCH_DIR="$PROJ_ROOT/scratch"
+SIM_CFG_FILE="$SETUP_DIR/cfg/vav_sim_cfg.hjson"
+LICENSE_DIR="$SETUP_DIR/LICENSE"
+
+
+##
+##  Parse command-line args.
+##
+
+if [ $# -eq 0 ]; then
+  echo "Error: Command-line argument missing."
+  echo ""
+  show_cmd
+  exit 1
+fi
+
+SW_BUILD_ONLY=0
+RUN_ONLY=0
+LOCAL=0
+ECHO=0
+VERBOSE=0
+REMOTE_PTS=0
+REMOTE_OCD=0
+ITEMS=()
+REMEX=1
+
+while  [[ $# -gt 0 ]]; do
+  case $1 in
+    --help)
+      show_cmd
+      exit 0
+      ;;
+    --sw-build-only)
+      SW_BUILD_ONLY=1
+      shift
+      ;;
+    --run-only)
+      RUN_ONLY=1
+      shift
+      ;;
+    --local)
+      LOCAL=1
+      REMEX=0
+      shift
+      ;;
+    --echo)
+      ECHO=1
+      shift
+      ;;
+    --verbose)
+      VERBOSE=1
+      shift
+      ;;
+    --remote-pts)
+      REMOTE_PTS=1
+      shift
+      ;;
+    --remote-ocd)
+      REMOTE_OCD=1
+      shift
+      ;;
+    -*|--*)
+      echo "Error: Invalid option switch $1"
+      echo ""
+      show_cmd
+      exit 1
+      ;;
+    *)
+      ITEMS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+
+##
+##  Check command-line args.
+##
+
+if [ $SW_BUILD_ONLY == "1" ]; then
+  if [ $RUN_ONLY == "1" ]; then
+    echo "Error: The --sw-build-only and --run-only switches cannot be used togther."
+    exit 1
+  fi
+  if [ $REMOTE_PTS == "1" ]; then
+    echo "Warning: The --sw-build-only and --remote-pts switches cannot be" \
+         "used together. The --remote-pts switch will be ignored."
+    REMOTE_PTS=0
+  fi
+  if [ $REMOTE_OCD == "1" ]; then
+    echo "Warning: The --sw-build-only and --remote-ocd switches cannot be" \
+         "used together. The --remote-ocd switch will be ignored."
+    REMOTE_OCD=0
+  fi
+else
+  if [ $LOCAL == "1" ]; then
+    echo "Error: The --local switch cannot be used when launching simulations." \
+       "Simulations are always executed remotely."
+    exit 1
+  fi
+  if [ ${#ITEMS[@]} -eq 0 ]; then
+    echo "Error: Test name or regression name must be given to run simulation."
+    exit 1
+  fi
+fi
+
+
+##
+##  Compose VeriForge command line.
+##
+
+cmd="VeriForge --xprop-off"
+if [ $VERBOSE == "1" ]; then
+  cmd+=" --verbose=debug"
+fi
+if [ $ECHO == "1" ]; then
+  cmd+=" --echo"
+fi
+if [ $REMEX == "1" ]; then
+  cmd+=" --remex"
+fi
+if [ $SW_BUILD_ONLY == "1" ]; then
+  cmd+=" --sw-build-only"
+  if [ $LOCAL == "1" ]; then
+    cmd+=" --branch=remex"
+  else
+    cmd+=" --download-sw-img"
+  fi
+elif [ $RUN_ONLY == "1" ]; then
+  cmd+=" --run-only --upload-sw-img"
+fi
+if [ ${#ITEMS[@]} -ne 0 ]; then
+  cmd+=" -i"
+  for i in "${ITEMS[@]}"; do
+    cmd+=" $i"
+  done
+fi
+cmd+=" --proj-root=$PROJ_ROOT --scratch-root=$SCRATCH_DIR --max-parallel=2 $SIM_CFG_FILE"
+
+
+##
+##  Run VeriForge.
+##
+
+if [[ -z "$BCI_HOME" ]]; then
+  echo "Error: The environment variable \$BCI_HOME is not set."
+  exit 1
+fi
+if [ ! -f $BCI_HOME/bin/VeriForge ]; then
+  echo "Error: Invalid \$BCI_HOME setting: $BCI_HOME"
+  exit 1
+fi
+if [[ -z "$PATH" ]]; then
+  export PATH=$BCI_HOME/bin
+else
+  export PATH=$BCI_HOME/bin:$PATH
+fi
+
+if [ ! -f $LICENSE_DIR/vav0.lic ]; then
+  echo "Error: VAV license file $LICENSE_DIR/vav0.lic missing."
+  exit 1
+fi
+export BCI_LICENSE=$LICENSE_DIR
+
+_HOSTNAME=`hostname`
+if [ $SW_BUILD_ONLY == "1" ] && [ $LOCAL == "1" ]; then
+  which riscv32-unknown-elf-gcc >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "Error: Cannot locate Risc-V tool suite executables on host" \
+         "$_HOSTNAME. Set the \$PATH variable to point to your Risc-V" \
+         "tool executables."
+    exit 1
+  fi
+fi
+
+echo ""
+echo "Executing:" $cmd
+echo ""
+$cmd
+

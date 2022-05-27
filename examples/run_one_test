@@ -1,0 +1,6 @@
+#!/bin/bash 
+
+source ./setup.sh
+
+vav-run --run-only dif_uart_smoketest
+

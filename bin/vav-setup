@@ -1,0 +1,283 @@
+#!/bin/bash
+###############################################################################
+# Copyright (C) May 2022, Belmont Computing, Inc. -- All Rights Reserved
+# Licensed under the BCI-SLA. See LICENSE for details.
+#
+# NOTICE:  All information contained herein is, and remains the property of
+# Belmont Computing, Inc.  The intellectual and technical concepts contained
+# herein are proprietary to Belmont Computing, Inc. and may be covered by U.S.
+# and Foreign Patents, patents in process, and are protected by trade secret
+# or copyright law.  Dissemination of this information or reproduction of this
+# material is strictly forbidden unless prior written permission is obtained
+# from Belmont Computing, Inc.
+###############################################################################
+
+################################################################################
+##
+##  Check pre-requisites
+##
+################################################################################
+
+HOSTNAME=`hostname`
+
+# Check OS.
+OS_CHECK=""
+which lsb_release >/dev/null 2>&1
+if [ $? -eq 0 ]; then
+  rv=`lsb_release -a 2>/dev/null`
+  if [ $? -eq 0 ]; then
+    chk=`echo $rv | grep -i ubuntu`
+    if [ -z "$chk" ]; then
+      OS_CHECK="not ubuntu"
+    else
+      chk=`echo $rv | grep 18.04`
+      if [ -z "$chk" ]; then
+        OS_CHECK="not 18.04"
+      else
+        OS_CHECK="ok"
+      fi
+    fi
+  fi
+fi
+if [ $OS_CHECK == "" ]; then
+  ls /etc/*release >/dev/null 2?&1
+  if [ $? -eq 0 ]; then
+    for f in `ls /etc/*release`; do
+      chk=`grep -i ubuntu $f`
+      if [ -z "$chk" ]; then
+        OS_CHECK="not ubuntu"
+      else
+        chk=`grep 18.04 $f`
+        if [ -z "$chk" ]; then
+          OS_CHECK="not 18.04"
+        else
+          OS_CHECK="ok"
+        fi
+      fi
+    done
+  fi
+fi
+if [ $OS_CHECK != "ok" ]; then
+  echo ""
+  if [ $OS_CHECK == "" ]; then
+    echo "[Error] Cannot determine OS distribution of host $hostname."
+  elif [ $OS_CHECK == "not ubuntu" ]; then
+    echo "[Error] VAV requires OS distribution Ubuntu 18.04. Host " \
+         "$hostname OS is not Ubuntu."
+  else
+    echo "[Warning] VAV requires OS distribution Ubuntu 18.04. Host " \
+         "$hostname does not run on Ubuntu 18.04."
+  fi
+  echo ""
+  if [ OS_CHECK != "not 18.04" ]; then
+    exit 1
+  fi
+fi
+
+# Check Python.
+which python3 >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "[Error] Command python3 not found, which is required by the VAV" \
+       "setup process. Exiting vav-setup."
+  echo ""
+  exit 1
+fi
+
+pip3 list 2>&1 | grep wget >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  which curl >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo ""
+    echo "[Error] The VAV setup process requires either the 'curl' "\
+         "or Python module 'wget'. Neither of these is available on" \
+         "host $HOSTNAME. Exiting vav-setup."
+    echo ""
+    exit 1
+  fi
+fi
+
+
+################################################################################
+##
+##  Set file and directory paths.
+##
+################################################################################
+
+SCRIPT_PATH="${BASH_SOURCE}"
+while [ -L "${SCRIPT_PATH}" ]; do
+  SCRIPT_DIR="$(cd -P "$(dirname "${SCRIPT_PATH}")" >/dev/null 2>&1 && pwd)"
+  SCRIPT_PATH="$(readlink "${SCRIPT_PATH}")"
+  [[ ${SCRIPT_PATH} != /* ]] && SCRIPT_PATH="${SCRIPT_DIR}/${SCRIPT_PATH}"
+done
+SCRIPT_PATH="$(readlink -f "${SCRIPT_PATH}")"
+
+BIN_DIR="$(cd -P "$(dirname -- "${SCRIPT_PATH}")" >/dev/null 2>&1 && pwd)"
+SETUP_DIR="$(dirname "$BIN_DIR")"
+PRJ_ROOT="$(dirname "$SETUP_DIR")"
+LICENSE_DIR="$SETUP_DIR/LICENSE"
+REMEX_CFG_FILE="$SETUP_DIR/cfg/remex_client_cfg.yml"
+EXAMPLES_SETUP_SH="$SETUP_DIR/examples/setup.sh"
+
+
+################################################################################
+#
+#  Main Loop.
+#
+################################################################################
+
+while true; do
+  echo ""
+  echo "VAV Setup Main Menu"
+  echo "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾"
+  echo "  1. Install BCI tool suite."
+  echo "  2. Activate VAV license token."
+  echo "  3. Register username to local VAV setup."
+  echo ""
+  echo "  ∘ Press '1' to '3' to select a task to execute."
+  echo "  ∘ Press 'A' or 'a' to execute all 3 task, recommended when running vav-setup first time."
+  echo "  ∘ Press 'Q' or 'q' to quit vav-setup."
+  echo ""
+  while true; do
+    read -p "- Press one of these keys to proceed ⇒  " -n 1
+    echo ""
+    task=$REPLY
+    if [ $task == "Q" ] || [ $task == "q" ]; then
+      echo "[Info] Exiting vav-setup."
+      echo ""
+      exit 0
+    elif [[ $task =~ (1|2|3|a|A|q|Q) ]]; then
+      break
+    fi  
+    echo "  Error: Invalid selection '$pressed'. Try again."
+  done
+
+  ##
+  ##  Task (1) Install BCI tool.
+  ##
+  if [ $task == "1" ] || [ $task == "a" ] || [ $task == "A" ]; then
+    echo ""
+    echo "##"
+    echo "##  Execute setup task (1) BCI tool installation ..."
+    echo "##"
+    echo ""
+
+    box_token="6cl9enxzsxbyjzltnmirw8pszmr5fsxn"
+    read -p "- Use default BCI tool intallation token $box_token? (y|n) " -n 1
+    echo ""
+    if [ $REPLY != "Y" ] && [ $REPLY != "y" ]; then
+      echo ""
+      read -p "- Enter the BCI tool intallation token: " box_token
+    fi
+    echo ""
+    read -p "- Enter the directory path you want to install the BCI tool suite: " bci_home
+    echo ""
+    read -p "- Confirm installing BCI tools ($box_token) on $bci_home: (y|n) " -n 1
+    echo ""
+    if [ $REPLY == "Y" ] || [ $REPLY == "y" ]; then
+      echo ""
+      echo "[Info] Running installer $BIN_DIR/install ..."
+      $BIN_DIR/install $bci_home $box_token
+      if [ $? -ne 0 ]; then
+        echo ""
+        echo "[Error] BCI tool installer encountered error."
+        echo "        BCI tool installation failed or incomplete."
+        echo ""
+      else
+        bci_home="$( realpath "$bci_home" )"
+        bci_home="$( echo $bci_home | sed 's/\//\\\//g' )"
+        echo ""
+        echo "[Info] Updating \$BCI_HOME in $EXAMPLES_SETUP_SH ..."
+        sed -i 's/^export BCI_HOME=.*$/export BCI_HOME='$bci_home'/' $EXAMPLES_SETUP_SH
+        if [ $? -ne 0 ]; then
+          echo ""
+          echo "[Error] vav-setup failed to update \$BCI_HOME in $EXAMPLES_SET_SH."
+          echo "        BCI tool installation incomplete."
+          echo ""
+        else
+          echo ""
+          echo "[Info] BCI tool installation task completed successfully."
+          echo ""
+        fi
+      fi
+    fi
+  fi
+
+  ##
+  ##  Task (2) Activate VAV license token.
+  ##
+  if [ $task == "2" ] || [ $task == "a" ] || [ $task == "A" ]; then
+    echo ""
+    echo "##"
+    echo "##  Execute setup task (2) License Activation ..."
+    echo "##"
+    echo ""
+    echo "[info] Running $BIN_DIR/activate-vav ..."
+    $BIN_DIR/activate-vav
+    if [ $? -ne 0 ]; then
+      echo ""
+      echo "[Error] activate-vav execution encountered error."
+      echo "        VAV license activation task failed."
+      echo ""
+    else
+      if [ -f $LICENSE_DIR/vav0.lic ]; then
+        echo ""
+        echo "[Info] Backing up existing license file: $LICENSE_DIR/vav0.lic ..."
+        echo ""
+        mv -f $LICENSE_DIR/vav0.lic $LICENSE_DIR/vav0.lic.bak
+      fi
+      if [ -f ./vav0.lic ]; then
+        if [ ! -d $LICENSE_DIR ]; then
+          mkdir -p $LICENSE_DIR
+        fi
+        mv ./vav0.lic $LICENSE_DIR
+        if [ $? -ne 0 ]; then
+          echo ""
+          echo "[Error] Failed to place vav0.lic file into $LICENSE_DIR."
+          echo "        VAV license activaion task incomplete."
+          echo ""
+        else
+          echo ""
+          echo "[Info] VAV license activation task completed successfully."
+          echo ""
+        fi
+      else
+        echo ""
+        echo "[Error] activate-vav failed to generate the vav0.lic license file."
+        echo "        VAV license activation task failed."
+        echo ""
+      fi
+    fi
+  fi
+
+  ##
+  ##  Task (3) Register username.
+  ##
+  if [ $task == "3" ] || [ $task == "a" ] || [ $task == "A" ]; then
+    echo ""
+    echo "##"
+    echo "##  Execute setup task (3) username registry ..."
+    echo "##"
+    echo ""
+    read -p "- Enter your VulcanHub account username: " username
+    echo ""
+    read -p "- Confirm updating username to $username? (y|n) " -n 1
+    echo ""
+    if [ $REPLY == "Y" ] || [ $REPLY == "y" ]; then
+      echo ""
+      echo "[Info] Updating username in $REMEX_CFG_FILE ..."
+      sed -i 's/^client_id: *.*$/client_id: '$username'/' $REMEX_CFG_FILE
+      if [ $? -ne 0 ]; then
+        echo ""
+        echo "[Error] vav-setup failed to update username to '$username'."
+        echo "        Username registry task failed."
+        echo ""
+      else
+        echo ""
+        echo "[Info] Username registry task completed successfully."
+        echo ""
+      fi
+    fi
+  fi
+done 
+

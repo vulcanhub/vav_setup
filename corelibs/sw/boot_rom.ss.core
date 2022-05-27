@@ -1,0 +1,51 @@
+CAPI=2:
+###############################################################################
+# Copyright (C) May 2022, Belmont Computing, Inc. -- All Rights Reserved
+# Licensed under the BCI-SLA. See LICENSE for details.
+#
+# NOTICE:  All information contained herein is, and remains the property of
+# Belmont Computing, Inc.  The intellectual and technical concepts contained
+# herein are proprietary to Belmont Computing, Inc. and may be covered by U.S.
+# and Foreign Patents, patents in process, and are protected by trade secret
+# or copyright law.  Dissemination of this information or reproduction of this
+# material is strictly forbidden unless prior written permission is obtained
+# from Belmont Computing, Inc.
+###############################################################################
+
+name: "bci:athos_sw:boot_rom:1.0"
+description: "SW stack for boot ROM."
+
+filesets:
+  files_boot_rom:
+    depend:
+      - bci:athos_sw:base:1.0
+      - bci:athos_sw:dif:1.0
+      - bci:athos_sw:top:1.0
+    files:
+      - irq_vector.S : {file_type: swAsmSource}
+      - rom_crt.S    : {file_type: swAsmSource}
+      - bootstrap.h  : {is_include_file: true}
+      - chip_info.h  : {is_include_file: true}
+      - bootstrap.c
+      - boot_rom.c
+      - rom_link.ld : {file_type: swLdSource}
+    file_type: swCSource
+
+  files_device:
+    files:
+      - info_sections.ld
+    file_type: swLdSource
+
+
+targets:
+  default: 
+    filesets:
+      - files_boot_rom
+      - files_device
+
+provider:
+  name: github
+  repo: athos_sw_boot_rom
+  user: vulcanhub
+  version: v1.0.1
+

@@ -1,0 +1,39 @@
+CAPI=2:
+###############################################################################
+# Copyright (C) May 2022, Belmont Computing, Inc. -- All Rights Reserved
+# Licensed under the BCI-SLA. See LICENSE for details.
+#
+# NOTICE:  All information contained herein is, and remains the property of
+# Belmont Computing, Inc.  The intellectual and technical concepts contained
+# herein are proprietary to Belmont Computing, Inc. and may be covered by U.S.
+# and Foreign Patents, patents in process, and are protected by trade secret
+# or copyright law.  Dissemination of this information or reproduction of this
+# material is strictly forbidden unless prior written permission is obtained
+# from Belmont Computing, Inc.
+###############################################################################
+
+name: "bci:athos_sw:flash_ctrl:1.0"
+description: "SW stack for flash controller."
+
+filesets:
+  files_flash_ctrl:
+    depend:
+      - bci:athos_sw:base:1.0
+      - bci:athos_sw:top:1.0
+    files:
+      - flash_ctrl.h :           {is_include_file: true}
+      - regs/flash_ctrl_regs.h : {is_include_file: true}
+      - flash_ctrl.c
+    file_type: swCSource
+
+targets:
+  default: 
+    filesets:
+      - files_flash_ctrl
+
+provider:
+  name: github
+  repo: athos_sw_flash_ctrl
+  user: vulcanhub
+  version: v1.0.1
+

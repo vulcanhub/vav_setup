@@ -1,0 +1,175 @@
+////////////////////////////////////////////////////////////////////////////////
+// Copyright (C) April 2022, Belmont Computing, Inc. -- All Rights Reserved
+// Licensed under the BCI-SLA. See LICENSE for details.
+//
+// NOTICE:  All information contained herein is, and remains the property of
+// Belmont Computing, Inc.  The intellectual and technical concepts contained
+// herein are proprietary to Belmont Computing, Inc. and may be covered by U.S. 
+// and Foreign Patents, patents in process, and are protected by trade secret
+// or copyright law.  Dissemination of this information or reproduction of this 
+// material is strictly forbidden unless prior written permission is obtained
+// from Belmont Computing, Inc. 
+////////////////////////////////////////////////////////////////////////////////
+
+{
+    // Set Risc-V tool installation path on your computer.  Required only
+    // if you plan to build SW locally on your computer.
+    riscv_dir: /tools/riscv 
+
+   /////////////////////////////////////////////////////////////////////////////////////////////////////
+   // Compile source files.
+   /////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   sw_c_cmd: "riscv32-unknown-elf-clang"
+
+   comp_opts_0: "[ -Xclang, -fcolor-diagnostics, -pipe, -D_FILE_OFFSET_BITS=64, -Wall, -Winvalid-pch, -Wextra, -Werror, -std=c11, -g -nostdinc, -isystem{export_root}/base/freestanding, -fno-asynchronous-unwind-tables, -fno-common, -Wimplicit-fallthrough, -Wswitch-default, -Wno-covered-switch-default, -Wgnu, -Wno-error=unused-function, -Wno-unused-parameter, -Wno-sign-compare, -Wno-missing-field-initializers, -Wno-gnu-zero-variadic-macro-arguments, -Os, -fvisibility=hidden, -Wstrict-prototypes, --gcc-toolchain={riscv_dir}, -march=rv32imc, -mabi=ilp32, -mcmodel=medany ]"
+
+   comp_opts_1: "[ -I{export_root}, -o, <OBJECT> ]"
+
+   sw_c_opts: ["{comp_opts_0}", "{comp_opts_1}"]
+   sw_c_ext: ".c.o"
+
+   sw_asm_cmd: "riscv32-unknown-elf-clang"
+   sw_asm_opts: ["{comp_opts_0}", "{comp_opts_1}"]
+   sw_asm_ext: ".S.o"
+        
+   sw_build_pass_patterns: []    
+   sw_build_fail_patterns: []
+
+
+   /////////////////////////////////////////////////////////////////////////////////////////////////////
+   // Linking images.
+   /////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   sw_link_cmd: "riscv32-unknown-elf-clang"
+
+   link_opts_0: "[ -o <IMAGE_OUT>, <OBJECTS>, -Wl,--as-needed, -Wl,--no-undefined, -fuse-ld={riscv_dir}/bin/riscv32-unknown-elf-ld, -nostartfiles, -nostdlib, -static, -Wl,--warn-common, -Wl,--orphan-handling=warn, -Wl,--fatal-warnings, --gcc-toolchain={riscv_dir}, -march=rv32imc, -mabi=ilp32, -mcmodel=medany, -Wl,--start-group, <OBJECTS>, -Wl,--end-group, -Wl,-L,{export_root}/ ]"
+   link_opts_1: "[ -Wl,--build-id=none ]"
+
+   sw_link_opts: ["{link_opts_0}", "-Wl,-T,{export_root}/all/common/flash_link.ld", "{link_opts_1}"]
+
+   sw_link_ext: [".elf"]
+
+
+   obj_group_0: "[ flash_crt.S.o, ibex_interrupt_vectors.S.o ]" 
+
+   obj_group_1: "[ crt.S.o, memory.c.o, irq.c.o, top_athos.c.o, device_sim_verilator.c.o, mmio.c.o, bitfield.c.o, log.c.o, print.c.o, dif_uart.c.o, handler.c.o, test_main.c.o, test_status.c.o, hart.c.o, ibex.c.o, test_coverage_none.c.o ]"
+
+   sw_link_modes: [
+      { 
+        image: boot_rom_sim_verilator
+        sw_link_opts: ["{link_opts_0}", "-Wl,-T,{export_root}/boot_rom/rom_link.ld", "{link_opts_1}"]
+        objects: [["boot_rom.c.o", "bootstrap.c.o", "irq_vector.S.o", "rom_crt.S.o"], 
+                  ["crt.S.o", "hart.c.o", "ibex.c.o", "mmio.c.o", "bitfield.c.o", "memory.c.o", "print.c.o", "dif_uart.c.o", "flash_ctrl.c.o", "top_athos.c.o", "dif_gpio.c.o", "log.c.o", "device_sim_verilator.c.o", "test_status.c.o"]]
+      }
+      {
+        image: dif_plic_smoketest
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "dif_plic_smoketest.c.o", "dif_plic.c.o"]]
+      }
+      {
+        image: dif_plic_smoketest_gpio
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "dif_plic_smoketest_gpio.c.o", "dif_gpio.c.o", "dif_plic.c.o"]]
+      }
+      {
+        image: dif_gpio_smoketest
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "dif_gpio_smoketest.c.o", "dif_gpio.c.o"]]
+      }
+      {
+        image: dif_plic_smoketest_uart
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "dif_plic_smoketest_uart.c.o", "dif_plic.c.o"]]
+      }
+      {
+        image: dif_aon_timer_smoketest
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "dif_aon_timer_smoketest.c.o", "dif_aon_timer.c.o"]]
+      }
+      {
+        image: dif_rv_timer_smoketest
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "dif_rv_timer_smoketest.c.o", "dif_rv_timer.c.o"]]
+      }
+      {
+        image: dif_uart_smoketest
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "dif_uart_smoketest.c.o"]]
+      }
+      {
+        image: dif_uart_bci_test
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "dif_uart_bci_test.c.o"]]
+      }
+      {
+        image: dif_rstmgr_smoketest
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "dif_rstmgr_smoketest.c.o", "dif_rstmgr.c.o"]]
+      }
+      {
+        image: pmp_smoketest_napot
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "pmp_smoketest_napot.c.o", "pmp.c.o"]]
+      }
+      {
+        image: pmp_smoketest_tor
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "pmp_smoketest_tor.c.o", "pmp.c.o"]]
+      }
+      {
+        image: dif_uart_helloworld
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "dif_uart_helloworld.c.o"]]
+      }
+      {
+        image: dif_rv_timer_smoketest_3us
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "dif_rv_timer_smoketest_3us.c.o", "dif_rv_timer.c.o"]]
+      }
+      {
+        image: dif_rv_timer_smoketest_3sec
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "dif_rv_timer_smoketest_3sec.c.o", "dif_rv_timer.c.o"]]
+      }
+      {
+        image: flash_ctrl_test
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "flash_ctrl_test.c.o", "flash_ctrl.c.o"]]
+      }
+      {
+        image: coverage_test
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "coverage_test.c.o"]]
+      }
+      {
+        image: crt_test
+        objects: [["crt_test.c.o", "{obj_group_0}"],
+                  ["crt.S.o", "memory.c.o", "irq.c.o", "top_athos.c.o", "device_sim_verilator.c.o", "mmio.c.o", "bitfield.c.o", "log.c.o", "print.c.o", "dif_uart.c.o", "handler.c.o", "test_status.c.o", "hart.c.o", "ibex.c.o", "test_coverage_none.c.o", "coverage_test.c.o"]]
+      }
+      {
+        image: bubble_sort     
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "bubble_sort.c.o"]]
+      }
+      {
+        image: hello_world     
+        objects: [["{obj_group_0}"], 
+                  ["{obj_group_1}", "dif_gpio.c.o", "demos.c.o", "hello_world.c.o"]]
+      }
+   ]
+
+   /////////////////////////////////////////////////////////////////////////////////////////////////////
+   // Format conversion.
+   /////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   sw_conv_modes: [
+      {
+         images: ["boot_rom_sim_verilator"]
+         sw_conv_cmd: "python3 {export_root}/bci_eda_elf2vmem_1.0/elf2vmem.py"
+         sw_conv_opts: ["{export_root}/top/data/autogen/top_athos.gen.hjson", "<IMAGE_IN>", "<IMAGE_OUT>"]
+         sw_conv_in_ext: ".elf"
+         sw_conv_out_ext: ".simple.vmem"
+      }
+   ]
+}

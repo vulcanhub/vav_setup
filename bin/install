@@ -1,0 +1,289 @@
+#!/usr/bin/env python3
+##############################################################################
+# Copyright (C) Belmont Computing, Inc. -- All Rights Reserved
+#
+# NOTICE: All information contained herein is, and remains the property of
+# Belmont Computing, Inc.  The interlectual and technical concepts contained
+# herein are proprietary to Belmont Computing, Inc. and may be covered by U.S.
+# and # Foreign Patents, patents in process, and are protected by trade secret
+# or copyright law.  Dissemination of this information or reproduction of this
+# material is strictly forbidden unless prior written permission is obtained
+# from Belmont Computing, Inc.
+###############################################################################
+
+import sys
+import os
+import re
+import shutil
+import tarfile
+import traceback
+import subprocess
+
+
+products = {'dagogo', 'siliconforge', 'veriforge'}
+
+_pkgtop = ''
+_tmp_bci='/tmp/bci'
+_bci_home = None
+_is_bundle_release = False
+_tools = ''
+#_tool_version = ''
+_err_cnt = 0
+
+
+def info(msg):
+    print(f'INFO (install.py): {msg}') 
+
+
+def warning(msg):
+    print(f'WARNING (install.py): {msg}') 
+
+
+def error(msg):
+    global _err_cnt
+    _err_cnt += 1
+    print(f'ERROR (install.py): {msg}') 
+
+
+def fatal(msg):
+    print(f'FATAL ERROR (install.py): {msg}\n') 
+    sys.exit(1)
+
+
+def usage(msg=None):
+    rv = 0
+    if msg:
+        print(f'USAGE ERROR (install.py): {msg}') 
+        rv = 1
+    print('\nUsage:   % install.py <installation_path> <box_link_token>')
+    print('Example: % install.py /path/to/tools/bci k2djdsjn84nam\n', flush=True)
+    sys.exit(rv)
+
+
+def mkdir(dr):
+    try:
+        os.makedirs(dr)
+    except Exception as e:
+        fatal(f'Cannot create directory {dr}: {str(e)}')
+
+
+def rmdir(dr):
+    try:
+        shutil.rmtree(dr)
+    except Exception as e:
+        fatal(f'Cannot remove directory {dr}: {str(e)}')
+
+
+def delete(item):
+    try:
+        os.unlink(item)
+    except Exception as e:
+        fatal(f'Cannot remove file {item}: {str(e)}')
+
+
+def copy(src, dst):
+    try:
+        shutil.copy2(src, dst, follow_symlinks=False)
+    except Exception as e:
+        error(f"Cannot copy file '{src}' to '{os.path.dirname(dst)}': " +
+              str(e))
+
+def copydir(src, dst):
+    try:
+        shutil.copytree(src, dst, symlinks=True)
+    except Exception as e:
+        error(f"Failed to copy '{src}' to '{os.path.dirname(dst)}': " +
+              str(e))
+
+
+def get_prod_dir(prod):
+    prodir = os.path.join(_pkgtop, prod)
+    for x in os.listdir(prodir):
+        if re.match('\d+\.\d+\.\d+\w*$', x):
+            return x, os.path.join(prodir, x)
+
+
+def install_folder(folder, skip_existing_file=True, skip_existing_link=True):
+    global _pkgtop
+    global _bci_home
+
+    srcdir = os.path.join(_pkgtop, folder)
+    dstdir = os.path.join(_bci_home, folder)
+    print(f'[INSTALL] src_dir {srcdir} - destdir {dstdir}', flush=True)
+    if not os.path.exists(dstdir):
+        mkdir(dstdir)
+    for x in os.listdir(srcdir):
+        dst = os.path.join(dstdir, x)
+        src = os.path.join(srcdir, x)
+        if os.path.exists(dst):
+            if os.path.islink(dst):
+                if not skip_existing_link:
+                    delete(dst)
+                    copy(src, dst)
+            else:
+                if not skip_existing_file:
+                    delete(dst)
+                    copy(src, dst)
+        else:
+            copy(src, dst)
+
+
+def install_product(prod):
+    version, srcdir = get_prod_dir(prod)
+    dstdir = os.path.join(_bci_home, prod, version)
+    if os.path.exists(dstdir):
+        a = input(f'- Product {prod} version {version} already exist under {_bci_home}.\n'
+                  '  Do you want to overwrite it? (y|n) ')
+        if a in ('y', 'Y', 'yes', 'Yes', 'YES'):
+            rmdir(dstdir)
+    copydir(srcdir, dstdir)
+
+
+def main():
+    global _bci_home
+
+    if len(sys.argv) == 1:
+        usage()
+    elif len(sys.argv) != 3:
+        usage('Incorrect command line usage.')
+    _bci_home = os.path.abspath(sys.argv[1])
+    box_link_token = sys.argv[2]
+
+    # Fetch .tar.gz file from Box using given <box_link_token> (sys.argv[2]).
+    fetch_tools(box_link_token)
+
+    check_release()
+
+    install_release()
+
+    # Clean up.
+    if os.path.exists(_tmp_bci):
+        rmdir(_tmp_bci)
+
+    if _err_cnt > 0:
+        fatal(f'Execution of install.py finished with {_err_cnt} errors. ' +
+              'BCI tool installation may be incorrect or incomplete. Please ' +
+              'fix the reported issues and run install.py again.')
+    else:
+        info(f'Execution of install.py completed successfully.\n')
+
+
+def _download_from_box(box_link_url, download_file):
+    use_which = None
+    try:
+        import wget
+        use_which = 'wget'
+    except:
+        p = subprocess.run(['which', 'curl'],
+                           stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+        if p.returncode == 0:
+            use_which = 'curl'
+
+    if use_which is None:
+        fatal('Install program required either Linux command \'curl\' ' +
+              'or Python module \'wget\'. Neither can be found on current ' +
+              'execution context.')
+
+    if use_which == 'wget':
+        wget.download(box_link_url, download_file)
+    else:
+        p = subprocess.run(['curl', '-L', '-o', download_file, box_link_url])
+    if not os.path.exists(download_file):
+        fatal('Failed to fetch tool release zip file from Box.')
+
+
+def fetch_tools(box_link_token):
+    # Clean up left-over data.
+    if os.path.exists(_tmp_bci):
+        rmdir(_tmp_bci)
+    os.makedirs(_tmp_bci, exist_ok=True)
+
+    download_file = os.path.join(_tmp_bci, 'release.tar.gz')
+    if os.path.exists(download_file):
+        os.remove(download_file)
+
+    try:
+        box_link_url = 'https://uberpanda.box.com/shared/static/' + box_link_token + '.gz'
+        _download_from_box(box_link_url, download_file)
+        expand_tarzip_file(download_file, _tmp_bci)
+        os.remove(download_file)
+    except Exception as e:
+        fatal(f'Failed to fetch release from Box.: {str(e)}')       
+
+
+def expand_tarzip_file(target_file, dest_dir):
+    f = tarfile.open(target_file)
+    f.extractall(dest_dir)
+
+
+def check_release():
+    global _is_bundle_release
+    global _tools
+    global _pkgtop
+    #global _tool_version
+
+    _tools = os.listdir(_tmp_bci)
+    print(f'Tools to be installed -> {_tools}', flush=True)
+    #if _tools[0] in ('vulcan_av', 'vulcan_ap'):
+    if _tools[0] == 'bci':
+        _pkgtop = os.path.join(_tmp_bci, _tools[0])
+        if os.path.exists(os.path.join(_pkgtop, 'bin')):
+            print(f'Found bundle release for tool {_tools[0]}', flush=True)
+            _is_bundle_release = True
+    else:
+        for tool in _tools:
+            if tool not in products:
+                fatal(f'Found unrecognised package {tool}. Closing installation..')
+
+        _pkgtop = _tmp_bci
+        #_tool_version = os.listdir(os.path.join(_pkgtop, _tools[0]))[0]
+
+
+def install_release():
+    global _is_bundle_release
+    global _tools
+    global _bci_home
+    
+    print(f'is_bundle_release -> {_is_bundle_release}', flush=True)
+    if _is_bundle_release:
+        if not os.path.exists(_bci_home):
+            mkdir(_bci_home)
+
+        # Install a complete bundle
+        if not os.path.exists(os.path.join(_bci_home, _tools[0])):
+            # First time installation
+            # Install all VAV-HOME compenents (i.e. bin, config, LICENSE)
+            install_folder('bin')
+            install_folder('config')
+            install_folder('LICENSE')
+        else:
+            # Install all VAV-HOME compenents (i.e. bin, config, LICENSE), overwriting
+            # existing data under <_bci_home/<_tools>
+            install_folder('bin', skip_existing_file=False, skip_existing_link=False)
+            install_folder('config', skip_existing_file=False, skip_existing_link=False)
+            install_folder('LICENSE', skip_existing_file=False, skip_existing_link=False)
+
+        # Install all components into <_bci_home/<_tools>
+        for prod in products:
+            install_product(prod)
+
+    else:
+        # Incremental update a tool
+        if not os.path.exists(_bci_home):
+            fatal(f'Specified installation path {_bci_home} does not exist.'
+                   ' Closing installaion...')
+            sys.exit(-1)
+        else:
+            for tool in _tools:
+                install_product(tool)
+    
+
+if __name__ == '__main__':
+    try:
+        main()
+    except Exception as e:
+        traceback.print_exc()
+        fatal(f'Encountered unexpected error during installation: {str(e)}')
+
+

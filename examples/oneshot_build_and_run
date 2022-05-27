@@ -1,0 +1,10 @@
+#!/bin/bash 
+
+source ./setup.sh
+
+if [ -d ../../scratch ]; then
+   rm -r ../../scratch
+fi
+
+vav-run dif_uart_smoketest
+

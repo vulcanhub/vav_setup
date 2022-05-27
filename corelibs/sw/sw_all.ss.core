@@ -1,0 +1,52 @@
+CAPI=2:
+###############################################################################
+# Copyright (C) May 2022, Belmont Computing, Inc. -- All Rights Reserved
+# Licensed under the BCI-SLA. See LICENSE for details.
+#
+# NOTICE:  All information contained herein is, and remains the property of
+# Belmont Computing, Inc.  The intellectual and technical concepts contained
+# herein are proprietary to Belmont Computing, Inc. and may be covered by U.S.
+# and Foreign Patents, patents in process, and are protected by trade secret
+# or copyright law.  Dissemination of this information or reproduction of this
+# material is strictly forbidden unless prior written permission is obtained
+# from Belmont Computing, Inc.
+###############################################################################
+
+name: "bci:athos_sw:all:1.0"
+description: "Collecting all Athos SW core bundles."
+
+filesets:
+    files_boot_rom:
+        depend:
+            - bci:athos_sw:boot_rom:1.0
+    files_apps:
+        depend:
+            - bci:athos_sw:apps:1.0
+    files_elf2vmem:
+        depend:
+            - bci:eda:elf2vmem:1.0
+    files_crt:
+        files:
+            - crt.S
+        file_type: swAsmSource
+    files_exts_common:
+        files:
+            - common/flash_crt.S :              {file_type: swAsmSource}
+            - common/ibex_interrupt_vectors.S : {file_type: swAsmSource}
+            - common/flash_link.ld:             {file_type: swLdSource}
+
+targets:
+  default:
+    filesets:
+      - files_boot_rom
+      - files_apps
+      - files_elf2vmem
+      - files_crt
+      - files_exts_common
+
+provider:
+  name: github
+  repo: athos_sw_all
+  user: vulcanhub
+  version: v1.0.1
+

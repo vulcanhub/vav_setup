@@ -1,0 +1,55 @@
+CAPI=2:
+###############################################################################
+# Copyright (C) May 2022, Belmont Computing, Inc. -- All Rights Reserved
+# Licensed under the BCI-SLA. See LICENSE for details.
+#
+# NOTICE:  All information contained herein is, and remains the property of
+# Belmont Computing, Inc.  The intellectual and technical concepts contained
+# herein are proprietary to Belmont Computing, Inc. and may be covered by U.S.
+# and Foreign Patents, patents in process, and are protected by trade secret
+# or copyright law.  Dissemination of this information or reproduction of this
+# material is strictly forbidden unless prior written permission is obtained
+# from Belmont Computing, Inc.
+###############################################################################
+
+name: "bci:athos_sw:base:1.0"
+description: "Basic SW modules."
+
+filesets:
+  files_base:
+    files:
+      - memory.h :                   {is_include_file: true}
+      - memory.c
+      - mmio.h :                     {is_include_file: true}
+      - mmio.c
+      - bitfield.h :                 {is_include_file: true}
+      - bitfield.c
+      - csr.h :                      {is_include_file: true}
+      - csr_registers.h :            {is_include_file: true}
+      - stdasm.h :                   {is_include_file: true}
+      - hardened.h :                 {is_include_file: true}
+      - macros.h :                   {is_include_file: true}
+      - freestanding/assert.h:       {is_include_file: true}
+      - freestanding/float.h:        {is_include_file: true}
+      - freestanding/iso646.h:       {is_include_file: true}
+      - freestanding/limits.h:       {is_include_file: true}
+      - freestanding/README.md:      {is_include_file: true}
+      - freestanding/stdalign.h:     {is_include_file: true}
+      - freestanding/stdarg.h:       {is_include_file: true}
+      - freestanding/stdbool.h:      {is_include_file: true}
+      - freestanding/stddef.h:       {is_include_file: true}
+      - freestanding/stdint.h:       {is_include_file: true}
+      - freestanding/stdnoreturn.h:  {is_include_file: true}
+    file_type: swCSource
+
+targets:
+  default: 
+    filesets:
+      - files_base
+
+provider:
+  name: github
+  repo: athos_sw_base
+  user: vulcanhub
+  version: v1.0.1
+
