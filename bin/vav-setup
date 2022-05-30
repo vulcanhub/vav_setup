@@ -162,7 +162,7 @@ while true; do
     echo "##"
     echo ""
 
-    box_token="6cl9enxzsxbyjzltnmirw8pszmr5fsxn"
+    box_token="k7604gcih6e8w938bkjppilam22d6acd"
     read -p "- Use default BCI tool intallation token $box_token? (y|n) " -n 1
     echo ""
     if [ $REPLY != "Y" ] && [ $REPLY != "y" ]; then
