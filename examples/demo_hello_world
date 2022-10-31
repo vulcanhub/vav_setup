@@ -1,0 +1,6 @@
+#!/bin/bash 
+
+source ./setup.sh
+
+vav-run --run-only --echo --remote-pts hello_world_test
+

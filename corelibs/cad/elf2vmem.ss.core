@@ -12,7 +12,7 @@ CAPI=2:
 # from Belmont Computing, Inc.
 ###############################################################################
 
-name: "bci:eda:elf2vmem:1.0"
+name: "bci:cad:elf2vmem:1.0"
 description: "Script to convert elf to vmem format."
 
 filesets:
@@ -32,5 +32,5 @@ provider:
   name: github
   repo: elf2vmem
   user: vulcanhub
-  version: v1.0.1
+  version: v1.0.2
 

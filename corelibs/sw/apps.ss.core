@@ -47,5 +47,5 @@ provider:
   name: github
   repo: athos_sw_apps
   user: vulcanhub
-  version: v1.0.1
+  version: v1.0.2
 

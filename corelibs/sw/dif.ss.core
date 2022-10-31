@@ -83,10 +83,15 @@ filesets:
       - handler.h :     {is_include_file: true}
       - handler.c
     file_type: swCSource
-  files_arch:
+  files_arch_verilator:
     files:
       - device.h :     {is_include_file: true} 
       - device_sim_verilator.c
+    file_type: swCSource
+  files_arch_palladium:
+    files:
+      - device.h :     {is_include_file: true} 
+      - device_sim_palladium.c
     file_type: swCSource
 
 
@@ -98,11 +103,12 @@ targets:
       - files_runtime
       - files_irq
       - files_handler
-      - files_arch
+      - tool_verilator ? (files_arch_verilator)
+      - tool_palladium ? (files_arch_palladium)
 
 provider:
   name: github
   repo: athos_sw_dif
   user: vulcanhub
-  version: v1.0.1
+  version: v1.0.2
 

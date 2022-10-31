@@ -13,7 +13,8 @@ CAPI=2:
 ###############################################################################
 
 name: "bci:athos_sw:top:1.0"
-description: "Athos top-level SW code."
+description: "SoC-level SW declarations."
+
 
 filesets:
   files_top_athos_sw:

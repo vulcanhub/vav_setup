@@ -39,8 +39,8 @@ if [ $? -eq 0 ]; then
     fi
   fi
 fi
-if [ $OS_CHECK == "" ]; then
-  ls /etc/*release >/dev/null 2?&1
+if [ "$OS_CHECK" == "" ]; then
+  ls /etc/*release >/dev/null 2>&1
   if [ $? -eq 0 ]; then
     for f in `ls /etc/*release`; do
       chk=`grep -i ubuntu $f`
@@ -57,19 +57,19 @@ if [ $OS_CHECK == "" ]; then
     done
   fi
 fi
-if [ $OS_CHECK != "ok" ]; then
+if [ "$OS_CHECK" != "ok" ]; then
   echo ""
-  if [ $OS_CHECK == "" ]; then
-    echo "[Error] Cannot determine OS distribution of host $hostname."
-  elif [ $OS_CHECK == "not ubuntu" ]; then
+  if [ "$OS_CHECK" == "" ]; then
+    echo "[Error] Cannot determine OS distribution of host $HOSTNAME."
+  elif [ "$OS_CHECK" == "not ubuntu" ]; then
     echo "[Error] VAV requires OS distribution Ubuntu 18.04. Host " \
-         "$hostname OS is not Ubuntu."
+         "$HOSTNAME OS is not Ubuntu."
   else
     echo "[Warning] VAV requires OS distribution Ubuntu 18.04. Host " \
-         "$hostname does not run on Ubuntu 18.04."
+         "$HOSTNAME does not run on Ubuntu 18.04."
   fi
   echo ""
-  if [ OS_CHECK != "not 18.04" ]; then
+  if [ "$OS_CHECK" != "not 18.04" ] && [ "$OS_CHECK" != " not 20.04"]; then
     exit 1
   fi
 fi
@@ -134,14 +134,14 @@ while true; do
   echo "  2. Activate VAV license token."
   echo "  3. Register username to local VAV setup."
   echo ""
-  echo "  ∘ Press '1' to '3' to select a task to execute."
-  echo "  ∘ Press 'A' or 'a' to execute all 3 task, recommended when running vav-setup first time."
+  echo "  ∘ Press 'A' or 'a' to execute all 3 tasks, recommended when running vav-setup first time."
+  echo "  ∘ Press '1', '2', or '3' to select a single task to execute."
   echo "  ∘ Press 'Q' or 'q' to quit vav-setup."
   echo ""
   while true; do
-    read -p "- Press one of these keys to proceed ⇒  " -n 1
+    read -p "- Press one of the above keys to proceed ⇒  " -n 1
     echo ""
-    task=$REPLY
+    task="$REPLY"
     if [ $task == "Q" ] || [ $task == "q" ]; then
       echo "[Info] Exiting vav-setup."
       echo ""
@@ -162,7 +162,7 @@ while true; do
     echo "##"
     echo ""
 
-    box_token="k7604gcih6e8w938bkjppilam22d6acd"
+    box_token="3o1m1w2yvl5dat0umdn8ojointt5trz7"
     read -p "- Use default BCI tool intallation token $box_token? (y|n) " -n 1
     echo ""
     if [ $REPLY != "Y" ] && [ $REPLY != "y" ]; then
@@ -171,12 +171,13 @@ while true; do
     fi
     echo ""
     read -p "- Enter the directory path you want to install the BCI tool suite: " bci_home
+    bci_home="${bci_home/#\~/$HOME}"
     echo ""
-    read -p "- Confirm installing BCI tools ($box_token) on $bci_home: (y|n) " -n 1
+    read -p "- Confirm installing BCI tools ($box_token) at $bci_home: (y|n) " -n 1
     echo ""
     if [ $REPLY == "Y" ] || [ $REPLY == "y" ]; then
       echo ""
-      echo "[Info] Running installer $BIN_DIR/install ..."
+      echo "[Info] Running installer: $BIN_DIR/install $bci_home $box_token"
       $BIN_DIR/install $bci_home $box_token
       if [ $? -ne 0 ]; then
         echo ""
@@ -214,7 +215,10 @@ while true; do
     echo ""
     echo "[info] Running $BIN_DIR/activate-vav ..."
     $BIN_DIR/activate-vav
-    if [ $? -ne 0 ]; then
+    rv="$?"
+    if [ $rv == "99" ]; then
+      echo ""
+    elif [ $rv != "0" ]; then 
       echo ""
       echo "[Error] activate-vav execution encountered error."
       echo "        VAV license activation task failed."

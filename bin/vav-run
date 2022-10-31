@@ -166,6 +166,12 @@ if [ $SW_BUILD_ONLY == "1" ]; then
 elif [ $RUN_ONLY == "1" ]; then
   cmd+=" --run-only --upload-sw-img"
 fi
+if [ $REMOTE_PTS == "1" ]; then
+  cmd+=" --remote-pts"
+fi
+if [ $REMOTE_OCD == "1" ]; then
+  cmd+=" --remote-ocd"
+fi
 if [ ${#ITEMS[@]} -ne 0 ]; then
   cmd+=" -i"
   for i in "${ITEMS[@]}"; do

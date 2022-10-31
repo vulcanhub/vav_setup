@@ -1,0 +1,11 @@
+#!/bin/bash
+
+source ./setup.sh
+
+# Specify the test to debug.
+test=dif_aon_timer_smoketest
+
+riscv32-unknown-elf-gdb -d ../../scratch/remex/athos-sim-verilator/default/src/bci_athos_sw_dif_smoketest_1.0 \
+    -ex "target extended-remote 5.tcp.ngrok.io:22126" -ex "info reg" -ex "break test_main" -ex "r" \
+    ../../scratch/remex/athos-sim-verilator/sw/build-bin/${test}.elf
+

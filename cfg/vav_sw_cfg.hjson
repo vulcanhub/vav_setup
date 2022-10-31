@@ -33,8 +33,8 @@
    sw_asm_opts: ["{comp_opts_0}", "{comp_opts_1}"]
    sw_asm_ext: ".S.o"
         
-   sw_build_pass_patterns: []    
-   sw_build_fail_patterns: []
+   sw_build_pass_patterns: ["Flow status : pass"]
+   sw_build_fail_patterns: ["Flow status : fail"]
 
 
    /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -166,7 +166,7 @@
    sw_conv_modes: [
       {
          images: ["boot_rom_sim_verilator"]
-         sw_conv_cmd: "python3 {export_root}/bci_eda_elf2vmem_1.0/elf2vmem.py"
+         sw_conv_cmd: "python3 {export_root}/bci_cad_elf2vmem_1.0/elf2vmem.py"
          sw_conv_opts: ["{export_root}/top/data/autogen/top_athos.gen.hjson", "<IMAGE_IN>", "<IMAGE_OUT>"]
          sw_conv_in_ext: ".elf"
          sw_conv_out_ext: ".simple.vmem"

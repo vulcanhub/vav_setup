@@ -32,28 +32,28 @@ _err_cnt = 0
 
 
 def info(msg):
-    print(f'INFO (install.py): {msg}') 
+    print(f'INFO: [install] {msg}') 
 
 
 def warning(msg):
-    print(f'WARNING (install.py): {msg}') 
+    print(f'WARNING: [install] {msg}') 
 
 
 def error(msg):
     global _err_cnt
     _err_cnt += 1
-    print(f'ERROR (install.py): {msg}') 
+    print(f'ERROR: [install] {msg}') 
 
 
 def fatal(msg):
-    print(f'FATAL ERROR (install.py): {msg}\n') 
+    print(f'FATAL ERROR: [install] {msg}\n') 
     sys.exit(1)
 
 
 def usage(msg=None):
     rv = 0
     if msg:
-        print(f'USAGE ERROR (install.py): {msg}') 
+        error(f'{msg}') 
         rv = 1
     print('\nUsage:   % install.py <installation_path> <box_link_token>')
     print('Example: % install.py /path/to/tools/bci k2djdsjn84nam\n', flush=True)
@@ -64,36 +64,35 @@ def mkdir(dr):
     try:
         os.makedirs(dr)
     except Exception as e:
-        fatal(f'Cannot create directory {dr}: {str(e)}')
+        fatal(f'Cannot create directory {dr}: {e}')
 
 
 def rmdir(dr):
     try:
         shutil.rmtree(dr)
     except Exception as e:
-        fatal(f'Cannot remove directory {dr}: {str(e)}')
+        fatal(f'Cannot remove directory {dr}: {e}')
 
 
 def delete(item):
     try:
         os.unlink(item)
     except Exception as e:
-        fatal(f'Cannot remove file {item}: {str(e)}')
+        fatal(f'Cannot remove file {item}: {e}')
 
 
 def copy(src, dst):
     try:
         shutil.copy2(src, dst, follow_symlinks=False)
     except Exception as e:
-        error(f"Cannot copy file '{src}' to '{os.path.dirname(dst)}': " +
-              str(e))
+        error(f"Cannot copy file '{src}' to '{os.path.dirname(dst)}': {e}")
+
 
 def copydir(src, dst):
     try:
         shutil.copytree(src, dst, symlinks=True)
     except Exception as e:
-        error(f"Failed to copy '{src}' to '{os.path.dirname(dst)}': " +
-              str(e))
+        error(f"Failed to copy '{src}' to '{os.path.dirname(dst)}': {e}")
 
 
 def get_prod_dir(prod):
@@ -205,6 +204,7 @@ def fetch_tools(box_link_token):
 
     try:
         box_link_url = 'https://uberpanda.box.com/shared/static/' + box_link_token + '.gz'
+        info(f'Fetch BCI tool release from {box_link_url} ...')
         _download_from_box(box_link_url, download_file)
         expand_tarzip_file(download_file, _tmp_bci)
         os.remove(download_file)
@@ -221,15 +221,13 @@ def check_release():
     global _is_bundle_release
     global _tools
     global _pkgtop
-    #global _tool_version
+    global _tool_version
 
     _tools = os.listdir(_tmp_bci)
-    print(f'Tools to be installed -> {_tools}', flush=True)
     #if _tools[0] in ('vulcan_av', 'vulcan_ap'):
     if _tools[0] == 'bci':
         _pkgtop = os.path.join(_tmp_bci, _tools[0])
         if os.path.exists(os.path.join(_pkgtop, 'bin')):
-            print(f'Found bundle release for tool {_tools[0]}', flush=True)
             _is_bundle_release = True
     else:
         for tool in _tools:
@@ -237,7 +235,7 @@ def check_release():
                 fatal(f'Found unrecognised package {tool}. Closing installation..')
 
         _pkgtop = _tmp_bci
-        #_tool_version = os.listdir(os.path.join(_pkgtop, _tools[0]))[0]
+        _tool_version = os.listdir(os.path.join(_pkgtop, _tools[0]))[0]
 
 
 def install_release():
@@ -245,12 +243,12 @@ def install_release():
     global _tools
     global _bci_home
     
-    print(f'is_bundle_release -> {_is_bundle_release}', flush=True)
     if _is_bundle_release:
         if not os.path.exists(_bci_home):
             mkdir(_bci_home)
 
         # Install a complete bundle
+        info('Install complete bundle release.')
         if not os.path.exists(os.path.join(_bci_home, _tools[0])):
             # First time installation
             # Install all VAV-HOME compenents (i.e. bin, config, LICENSE)
@@ -269,13 +267,14 @@ def install_release():
             install_product(prod)
 
     else:
-        # Incremental update a tool
+        # Incremental update for a tool
         if not os.path.exists(_bci_home):
             fatal(f'Specified installation path {_bci_home} does not exist.'
                    ' Closing installaion...')
             sys.exit(-1)
         else:
             for tool in _tools:
+                info('Install incremental update for tool {tool}.')
                 install_product(tool)
     
 

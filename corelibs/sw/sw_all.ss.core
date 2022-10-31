@@ -24,7 +24,7 @@ filesets:
             - bci:athos_sw:apps:1.0
     files_elf2vmem:
         depend:
-            - bci:eda:elf2vmem:1.0
+            - bci:cad:elf2vmem:1.0
     files_crt:
         files:
             - crt.S
@@ -48,5 +48,5 @@ provider:
   name: github
   repo: athos_sw_all
   user: vulcanhub
-  version: v1.0.1
+  version: v1.0.2
 

@@ -45,5 +45,5 @@ provider:
   name: github
   repo: athos_sw_dif_tests
   user: vulcanhub
-  version: v1.0.1
+  version: v1.0.2
 
