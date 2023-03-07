@@ -19,5 +19,7 @@ pub_broker_port: 24433
 prv_broker_host: 5.tcp.ngrok.io
 prv_broker_port: 24433
 
+data_bridge_tmp_dir: ../../tmp
+
 baseline_top_core: bci:vav:server:1.0
 

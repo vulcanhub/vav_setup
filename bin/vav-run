@@ -14,7 +14,7 @@
 
 show_cmd() {
   echo "Usage: % vav-run [--help] [--verbose] [--echo] [--sw-build-only]"
-  echo "                 [--run-only] [--local] [--remote-pts] [--remote-ocd]"
+  echo "                 [--run-only] [--upload-sw-img] [--local] [--remote-pts] [--remote-ocd]"
   echo "                 [<test>|<regression> ...]"
   echo ""
 }
@@ -54,6 +54,7 @@ fi
 SW_BUILD_ONLY=0
 RUN_ONLY=0
 LOCAL=0
+UPLOAD_SW_IMG=0
 ECHO=0
 VERBOSE=0
 REMOTE_PTS=0
@@ -73,6 +74,10 @@ while  [[ $# -gt 0 ]]; do
       ;;
     --run-only)
       RUN_ONLY=1
+      shift
+      ;;
+    --upload-sw-img)
+      UPLOAD_SW_IMG=1
       shift
       ;;
     --local)
@@ -113,6 +118,13 @@ done
 ##
 ##  Check command-line args.
 ##
+
+if [ $UPLOAD_SW_IMG == "1" ]; then
+  if [ $RUN_ONLY != "1" ]; then
+    echo "Error: The --upload-sw-img switch can be used with --run-only switch only."
+    exit 1
+  fi
+fi
 
 if [ $SW_BUILD_ONLY == "1" ]; then
   if [ $RUN_ONLY == "1" ]; then
@@ -160,11 +172,15 @@ if [ $SW_BUILD_ONLY == "1" ]; then
   cmd+=" --sw-build-only"
   if [ $LOCAL == "1" ]; then
     cmd+=" --branch=remex"
-  else
-    cmd+=" --download-sw-img"
+#  else
+#    cmd+=" --download-sw-img"
   fi
 elif [ $RUN_ONLY == "1" ]; then
-  cmd+=" --run-only --upload-sw-img"
+  #cmd+=" --build-and-run"
+  cmd+=" --run-only"
+  if [ $UPLOAD_SW_IMG == "1" ]; then
+    cmd+=" --upload-sw-img"
+  fi
 fi
 if [ $REMOTE_PTS == "1" ]; then
   cmd+=" --remote-pts"

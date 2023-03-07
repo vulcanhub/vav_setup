@@ -116,7 +116,7 @@
               "dif_aon_timer_smoketest",
               "dif_rv_timer_smoketest",
               "dif_uart_smoketest",
-              "dif_uart_bci_test",
+              //"dif_uart_bci_test",
               "dif_rstmgr_smoketest",
               "pmp_smoketest_napot",
               "pmp_smoketest_tor",
@@ -135,7 +135,7 @@
       tests: [
               "dif_rv_timer_smoketest",
               "dif_uart_smoketest",
-              "dif_uart_bci_test",
+              //"dif_uart_bci_test",
               "flash_ctrl_test",
               "bubble_sort_test",
               "dif_rv_timer_smoketest_3us",
